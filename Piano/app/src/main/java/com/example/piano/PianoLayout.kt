@@ -6,8 +6,11 @@ import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import com.example.piano.data.Note
 import com.example.piano.databinding.FragmentPianoBinding
 import kotlinx.android.synthetic.main.fragment_piano.view.*
+import java.io.File
+import java.io.FileOutputStream
 
 class PianoLayout : Fragment() {
 
@@ -16,6 +19,8 @@ class PianoLayout : Fragment() {
 
     private val fullTones = listOf("B3","C4","D4","E4","F4","G4","A4","B4","C5")
     private val halfTones = listOf("C4#","D4#","F4#","G4#","A4#")
+
+    private var score:MutableList<Note> = mutableListOf<Note>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -31,18 +36,32 @@ class PianoLayout : Fragment() {
 
         val childFragmentManager = childFragmentManager
         val fragmentTransaction = childFragmentManager.beginTransaction()
-        val fragmentManager = getChildFragmentManager()
+
+        var startPlay:Long = 0
+        var endPlay:Long = 0
 
         fullTones.forEach {
             val fullToneKey = FullToneKeyFragment.newInstance(it)
 
             fullToneKey.onKeyDown = {
+                startPlay = System.currentTimeMillis()
+
+
+                if(!score.isEmpty()){
+                    val pause = Note("p", endPlay, startPlay)
+                    score.add(pause)
+                }
                 println("Piano key down $it")
 
             }
 
             fullToneKey.onKeyUp = {
-                println("Piano key up $it")
+                endPlay = System.currentTimeMillis()
+
+                val note = Note(it, startPlay, endPlay)
+                score.add(note)
+
+                println("Piano key up $note")
 
             }
             fragmentTransaction.add(view.fullToneKeyLayout.id, fullToneKey, "note_$it")
@@ -65,6 +84,33 @@ class PianoLayout : Fragment() {
 
         }
         fragmentTransaction.commit()
+
+        view.saveScoreBt.setOnClickListener{
+            var fileName = view.fileNameTextEdit.text.toString()
+            val path = this.activity?.getExternalFilesDir(null)
+            if(fileName.isNotEmpty() && path != null){
+                fileName = "$fileName.sheet"
+                var file = File(path, fileName)
+                if(!file.exists()){
+                    FileOutputStream(file, true).bufferedWriter().use{ writer ->
+                        score.forEach{
+                            writer.write("${it.toString()}\n")
+                        }
+                    }
+                    println("Saved file!")
+                    score.clear()
+                } else {
+                    println("File: $fileName already exists!")
+                }
+            }else{
+                if(fileName.isNotEmpty()){
+                    println("Invalid filename")
+                }
+                if(path != null){
+                    println("path does not exist")
+                }
+            }
+        }
 
         return view
     }
