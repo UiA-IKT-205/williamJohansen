@@ -1,11 +1,13 @@
 package com.example.piano
 
 
+import android.net.Uri
 import android.os.Bundle
 import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.core.net.toUri
 import com.example.piano.data.Note
 import com.example.piano.databinding.FragmentPianoBinding
 import kotlinx.android.synthetic.main.fragment_piano.view.*
@@ -13,6 +15,8 @@ import java.io.File
 import java.io.FileOutputStream
 
 class PianoLayout : Fragment() {
+
+    var onSave:((file: Uri) -> Unit)? = null
 
     private var _binding: FragmentPianoBinding? = null
     private val binding get() = _binding!!
@@ -85,6 +89,7 @@ class PianoLayout : Fragment() {
         }
         fragmentTransaction.commit()
 
+        // TODO: Clean up
         view.saveScoreBt.setOnClickListener{
             var fileName = view.fileNameTextEdit.text.toString()
             val path = this.activity?.getExternalFilesDir(null)
@@ -98,6 +103,12 @@ class PianoLayout : Fragment() {
                         }
                     }
                     println("Saved file!")
+                    this.onSave?.invoke(file.toUri())
+
+                    // Upload to firebase
+                    //val content:String = score.map { it.toString()}.reduce{acc, s -> acc + s +"\n"}
+                    //saveFile(fileName, content)
+
                     score.clear()
                 } else {
                     println("File: $fileName already exists!")
@@ -113,5 +124,21 @@ class PianoLayout : Fragment() {
         }
 
         return view
+    }
+
+    // TODO: Clean up
+    private fun saveFile(fileName:String, content:String){
+        val path = this.activity?.getExternalFilesDir(null)
+        if (path != null){
+            val file = File(path, fileName)
+            FileOutputStream(file, true).bufferedWriter().use { writer ->
+                writer.write(content)
+            }
+
+
+        }else {
+            // Could not get external path
+        }
+
     }
 }
